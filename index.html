@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecurePass Pro</title>
+
+<style>
+:root {
+  --dark-bg: linear-gradient(135deg, #141E30, #243B55);
+  --light-bg: linear-gradient(135deg, #f0f2f5, #ffffff);
+  --card-dark: rgba(255,255,255,0.08);
+  --card-light: rgba(0,0,0,0.05);
+  --text-dark: white;
+  --text-light: black;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: var(--dark-bg);
+  color: var(--text-dark);
+  transition: 0.4s;
+}
+
+.container {
+  padding: 25px;
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  width: 450px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.4);
+  transition: 0.4s;
+}
+
+.card-dark { background: var(--card-dark); }
+.card-light { background: var(--card-light); }
+
+h2 { text-align: center; margin-bottom: 15px; }
+
+.input-group {
+  display: flex;
+}
+
+input[type="password"], input[type="text"] {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px 0 0 10px;
+  border: none;
+  outline: none;
+}
+
+.toggle-eye {
+  padding: 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 0 10px 10px 0;
+  background: #00c6ff;
+}
+
+.strength-bar {
+  height: 12px;
+  border-radius: 10px;
+  margin-top: 12px;
+  transition: all 0.4s ease;
+  box-shadow: 0 0 15px currentColor;
+}
+
+#scoreText { margin-top: 5px; font-size: 14px; }
+
+.checklist { margin-top: 12px; font-size: 13px; }
+
+.generate-options { margin-top: 12px; font-size: 13px; }
+
+button.generate {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  background: #00c6ff;
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}
+
+.shake { animation: shake 0.3s; }
+
+.copy-popup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #00ff88;
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+
+<div class="theme-toggle" onclick="toggleTheme()">🌙</div>
+
+<div class="container card-dark" id="card">
+<h2>🔐 SecurePass Pro</h2>
+
+<div class="input-group">
+<input type="password" id="password" placeholder="Enter password">
+<button class="toggle-eye" onclick="togglePassword()">👁</button>
+</div>
+
+<div id="strengthBar" class="strength-bar"></div>
+<div id="scoreText"></div>
+
+<div class="checklist" id="checklist"></div>
+
+<div id="entropyDisplay" style="margin-top:10px;font-size:13px;"></div>
+
+<div class="generate-options">
+Length: <input type="number" id="length" value="14" min="8" max="24">
+<br>
+<input type="checkbox" id="upper" checked> Uppercase
+<input type="checkbox" id="numbers" checked> Numbers
+<input type="checkbox" id="symbols" checked> Symbols
+</div>
+
+<button class="generate" onclick="generatePassword()">Generate Password</button>
+</div>
+
+<script>
+const passwordInput = document.getElementById("password");
+const strengthBar = document.getElementById("strengthBar");
+const checklist = document.getElementById("checklist");
+const entropyDisplay = document.getElementById("entropyDisplay");
+const card = document.getElementById("card");
+
+passwordInput.addEventListener("input", analyzePassword);
+
+function analyzePassword() {
+  const password = passwordInput.value;
+  let score = 0;
+  let charset = 0;
+  let checks = "";
+
+  const commonPatterns = /(12345|password|qwerty|abc123)/i;
+  const repeated = /(.)\1{2,}/;
+  const keyboardPatterns = ["qwerty","asdfgh","zxcvbn"];
+  const sequences = ["1234","abcd","qwer","asdf"];
+  const commonNames = ["arjun","admin","user","test"];
+
+  if (commonPatterns.test(password))
+    checks += "⚠️ Avoid common passwords<br>";
+
+  if (repeated.test(password))
+    checks += "⚠️ Avoid repeated characters<br>";
+
+  if (keyboardPatterns.some(p => password.toLowerCase().includes(p)))
+    checks += "⚠️ Avoid keyboard patterns<br>";
+
+  if (sequences.some(seq => password.toLowerCase().includes(seq)))
+    checks += "⚠️ Avoid sequential patterns<br>";
+
+  if (commonNames.some(name => password.toLowerCase().includes(name)))
+    checks += "⚠️ Avoid personal/common names<br>";
+
+  if (password.length >= 8) { score++; checks += "✔ Minimum 8 characters<br>"; }
+  else checks += "❌ Minimum 8 characters<br>";
+
+  if (/[A-Z]/.test(password)) { score++; charset+=26; checks += "✔ Uppercase letter<br>"; }
+  else checks += "❌ Uppercase letter<br>";
+
+  if (/[a-z]/.test(password)) { score++; charset+=26; checks += "✔ Lowercase letter<br>"; }
+  else checks += "❌ Lowercase letter<br>";
+
+  if (/[0-9]/.test(password)) { score++; charset+=10; checks += "✔ Number<br>"; }
+  else checks += "❌ Number<br>";
+
+  if (/[^A-Za-z0-9]/.test(password)) { score++; charset+=32; checks += "✔ Special character<br>"; }
+  else checks += "❌ Special character<br>";
+
+  checklist.innerHTML = checks;
+
+  let percent = Math.min((score/5)*100,100);
+  strengthBar.style.width = percent + "%";
+
+  if (score <=2) strengthBar.style.background="#ff4d4d";
+  else if (score<=4) strengthBar.style.background="#ffaa00";
+  else strengthBar.style.background="#00ff88";
+
+  document.getElementById("scoreText").innerHTML =
+    "Security Score: " + percent.toFixed(0) + "%";
+
+  let entropy = charset>0 ? Math.log2(Math.pow(charset,password.length)) : 0;
+
+  entropyDisplay.innerHTML =
+    "Entropy: " + entropy.toFixed(2) + " bits<br>" +
+    "Estimated Crack Time: " + estimateCrackTime(entropy);
+
+  if (score <=2 && password.length>0) {
+    passwordInput.classList.add("shake");
+    setTimeout(()=> passwordInput.classList.remove("shake"),300);
+  }
+}
+
+function estimateCrackTime(entropy) {
+  const guessesPerSecond = 1e10;
+  const seconds = Math.pow(2, entropy) / guessesPerSecond;
+
+  if (seconds < 60) return "Instantly";
+  if (seconds < 3600) return (seconds/60).toFixed(1)+" minutes";
+  if (seconds < 86400) return (seconds/3600).toFixed(1)+" hours";
+  if (seconds < 31536000) return (seconds/86400).toFixed(1)+" days";
+  if (seconds < 3153600000) return (seconds/31536000).toFixed(1)+" years";
+  return "Centuries";
+}
+
+function generatePassword() {
+  let length = document.getElementById("length").value;
+  let chars = "abcdefghijklmnopqrstuvwxyz";
+  if (document.getElementById("upper").checked)
+    chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  if (document.getElementById("numbers").checked)
+    chars += "0123456789";
+  if (document.getElementById("symbols").checked)
+    chars += "!@#$%^&*()";
+
+  let password = "";
+  for (let i=0;i<length;i++)
+    password += chars.charAt(Math.floor(Math.random()*chars.length));
+
+  passwordInput.value = password;
+  analyzePassword();
+  showCopied("Generated & Ready!");
+}
+
+function togglePassword() {
+  passwordInput.type =
+    passwordInput.type === "password" ? "text" : "password";
+}
+
+function toggleTheme() {
+  if (document.body.style.background === "var(--light-bg)") {
+    document.body.style.background = "var(--dark-bg)";
+    card.classList.remove("card-light");
+    card.classList.add("card-dark");
+  } else {
+    document.body.style.background = "var(--light-bg)";
+    card.classList.remove("card-dark");
+    card.classList.add("card-light");
+  }
+}
+
+function showCopied(text) {
+  let msg = document.createElement("div");
+  msg.className="copy-popup";
+  msg.innerText=text;
+  document.body.appendChild(msg);
+  setTimeout(()=>msg.remove(),1500);
+}
+</script>
+
+</body>
+</html>
